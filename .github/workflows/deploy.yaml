@@ -1,0 +1,62 @@
+name: Deploy to GCP VM
+ 
+# Trigger: run on every push to the main branch
+on:
+  push:
+    branches:
+      - main
+ 
+jobs:
+  deploy:
+    name: SSH Deploy to GCP Mumbai VM
+    runs-on: ubuntu-latest
+ 
+    steps:
+      # Step 1: Checkout code (needed for context/logs)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+ 
+      # Step 2: Set up SSH agent with our private key
+      - name: Set up SSH key
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.VM_SSH_KEY }}
+ 
+      # Step 3: Add VM to known_hosts (prevent host verification prompt)
+      - name: Add VM to known_hosts
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan -H ${{ secrets.VM_HOST }} >> ~/.ssh/known_hosts
+ 
+      # Step 4: SSH into VM and deploy
+      - name: Deploy application
+        run: |
+          ssh ${{ secrets.VM_USER }}@${{ secrets.VM_HOST }} << 'EOF'
+            set -e
+            echo '=== Starting deployment ==='
+ 
+            # Navigate to app directory
+            cd ~/my-cicd-app
+ 
+            # Pull latest code from GitHub
+            git pull origin main
+ 
+            # Install/update dependencies
+            npm install --production
+ 
+            # Restart the app via PM2
+            pm2 restart my-cicd-app --update-env
+ 
+            # Show current PM2 status
+            pm2 status
+ 
+            echo '=== Deployment complete ==='
+          EOF
+ 
+      # Step 5: Confirm app is responding
+      - name: Health check
+        run: |
+          sleep 5
+          curl --fail --retry 3 --retry-delay 3 \
+            http://${{ secrets.VM_HOST }}:3000/health
+          echo 'Health check passed!'
