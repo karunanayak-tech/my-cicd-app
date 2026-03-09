@@ -8,7 +8,8 @@ app.get('/', (req, res) => {
     <h1>Hello from GCP Mumbai!</h1>
     <p>Deployed via GitHub Actions CI/CD</p>
     <p>Server time: ${now}</p>
-    <p>Version: 1.0.0</p>
+        <p>Version: 2.0.0 - Auto-deployed!</p>
+    <p>Last deploy: ${new Date().toLocaleDateString('en-IN', { timeZone: 'Asia/Kolkata' })}</p>
   `);
 });
  
